@@ -28,9 +28,9 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | TypeScript strict mode across all packages | **M1** ✅ |
 | Vitest test harness (`packages/core`) | **M1** ✅ |
 | ESLint + Prettier enforced workspace-wide | **M1** ✅ |
-| stdio + SSE MCP server connection | M2 |
-| Tool / resource / prompt discovery | M2 |
-| SQLite persistence, zero infra | M2 |
+| stdio + SSE MCP server connection | **M2** ✅ |
+| Tool / resource / prompt discovery | **M2** ✅ |
+| SQLite persistence, zero infra | **M2** ✅ |
 | Auto-generated test scenarios (Claude) | M3 |
 | YAML scripted scenarios | M3 |
 | LLM-as-judge scoring (4 rubrics) | M4 |
@@ -56,8 +56,8 @@ flowchart LR
 
 ### Packages
 
-- `packages/core` — shared types and utilities (MCP client, runner, judge, scanner added in later milestones)
-- `apps/web` — Next.js 15 App Router dashboard
+- `packages/core` — `discoverServer()` MCP client, `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types (`ServerConfig`, `DiscoveredSchema`)
+- `apps/web` — Next.js 15 App Router dashboard; `POST /api/servers` registers a server config, runs discovery, and persists the result to SQLite
 - `apps/cli` — `mcpbench` CLI binary
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
@@ -68,7 +68,7 @@ Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json`
 git clone https://github.com/your-org/mcp-test-bench
 cd mcp-test-bench
 pnpm install
-cp .env.example .env          # add your ANTHROPIC_API_KEY (required M3+)
+cp .env.example .env          # set DATABASE_PATH (optional) and ANTHROPIC_API_KEY (required M3+)
 pnpm dev                      # starts Next.js on localhost:3000
 ```
 
@@ -99,7 +99,7 @@ pnpm --filter @mcp-test-bench/web dev
 | Milestone | Description |
 |---|---|
 | **M1** ✅ | pnpm + Turborepo monorepo scaffold; Next.js 15 + Tailwind + shadcn/ui hello-world; TypeScript strict; Vitest; ESLint; Prettier; `.env.example` |
-| M2 | MCP client (stdio + SSE), schema browser UI |
+| **M2** ✅ | `discoverServer()` wrapping `@modelcontextprotocol/sdk` for stdio + SSE; normalized `DiscoveredSchema`; SQLite via `@libsql/client` + drizzle-orm; `POST /api/servers` route; integration tests against `server-everything` |
 | M3 | Scenario generation with Claude, YAML runner |
 | M4 | LLM-as-judge with 4 built-in rubrics |
 | M5 | Security scanner |
