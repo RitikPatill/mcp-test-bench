@@ -1,0 +1,16 @@
+{
+  "name": "@mcp-test-bench/cli",
+  "version": "0.0.1",
+  "bin": {
+    "mcpbench": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --project tsconfig.json --watch",
+    "lint": "eslint src"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "*"
+  }
+}
