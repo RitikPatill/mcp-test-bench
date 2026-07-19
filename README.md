@@ -31,8 +31,12 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | stdio + SSE MCP server connection | **M2** ✅ |
 | Tool / resource / prompt discovery | **M2** ✅ |
 | SQLite persistence, zero infra | **M2** ✅ |
-| Auto-generated test scenarios (Claude) | M3 |
-| YAML scripted scenarios | M3 |
+| Claude agent loop with live SSE trace streaming | **M3** ✅ |
+| `runScenario` async-generator + SQLite turn recording | **M3** ✅ |
+| `McpSession` persistent MCP connection across turns | **M3** ✅ |
+| `/runs/[id]` trace timeline page (live + replayed) | **M3** ✅ |
+| Auto-generated test scenarios (Claude) | M4 |
+| YAML scripted scenarios | M4 |
 | LLM-as-judge scoring (4 rubrics) | M4 |
 | Security scanner (static + runtime) | M5 |
 | Web dashboard with trace timeline | M6 |
@@ -56,8 +60,8 @@ flowchart LR
 
 ### Packages
 
-- `packages/core` — `discoverServer()` MCP client, `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types (`ServerConfig`, `DiscoveredSchema`)
-- `apps/web` — Next.js 15 App Router dashboard; `POST /api/servers` registers a server config, runs discovery, and persists the result to SQLite
+- `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
+- `apps/web` — Next.js 15 App Router dashboard; `POST /api/servers` registers a server, `POST /api/servers/[id]/scenarios` creates a scenario, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/runs/[id]` shows the live trace timeline
 - `apps/cli` — `mcpbench` CLI binary
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
@@ -100,8 +104,8 @@ pnpm --filter @mcp-test-bench/web dev
 |---|---|
 | **M1** ✅ | pnpm + Turborepo monorepo scaffold; Next.js 15 + Tailwind + shadcn/ui hello-world; TypeScript strict; Vitest; ESLint; Prettier; `.env.example` |
 | **M2** ✅ | `discoverServer()` wrapping `@modelcontextprotocol/sdk` for stdio + SSE; normalized `DiscoveredSchema`; SQLite via `@libsql/client` + drizzle-orm; `POST /api/servers` route; integration tests against `server-everything` |
-| M3 | Scenario generation with Claude, YAML runner |
-| M4 | LLM-as-judge with 4 built-in rubrics |
+| **M3** ✅ | `runScenario()` Claude agent loop (`@anthropic-ai/sdk`); `McpSession` persistent MCP connection; `scenarios`/`runs`/`turns` DB tables; SSE streaming via in-process broker; `/runs/[id]` trace timeline with live `EventSource` updates |
+| M4 | Scenario generation with Claude; YAML scripted runner; LLM-as-judge with 4 built-in rubrics |
 | M5 | Security scanner |
 | M6 | Full dashboard — traces, diffs, rankings |
 | M7 | CLI binary + CI integration |
