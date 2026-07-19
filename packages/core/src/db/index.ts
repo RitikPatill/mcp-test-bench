@@ -2,7 +2,7 @@ import { createClient } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
 import * as schema from './schema.js'
 
-export { servers, scenarios, runs, turns } from './schema.js'
+export { servers, scenarios, runs, turns, judgements } from './schema.js'
 
 export type DrizzleDb = ReturnType<typeof drizzle>
 const instances = new Map<string, DrizzleDb>()
@@ -58,6 +58,17 @@ export async function getDbReady(dbPath = 'local.db'): Promise<DrizzleDb> {
       assistant_message TEXT NOT NULL,
       tool_calls TEXT NOT NULL,
       tool_results TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `)
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS judgements (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      rubric_id TEXT NOT NULL,
+      overall_score INTEGER NOT NULL,
+      criteria_scores TEXT NOT NULL,
       created_at INTEGER NOT NULL
     )
   `)
