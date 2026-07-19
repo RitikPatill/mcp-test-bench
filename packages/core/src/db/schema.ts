@@ -2,6 +2,9 @@ import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 import type { ServerConfig, DiscoveredSchema } from '../mcp-client/types.js'
 import type Anthropic from '@anthropic-ai/sdk'
 
+// Inline to avoid circular import with judge/types.ts
+type DbCriterionScore = Array<{ name: string; score: number; reasoning: string }>
+
 export const servers = sqliteTable('servers', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -41,6 +44,19 @@ export const turns = sqliteTable('turns', {
     .notNull(),
   toolResults: text('tool_results', { mode: 'json' })
     .$type<Array<{ id: string; content: unknown; isError: boolean }>>()
+    .notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})
+
+// overallScore is stored as integer 0–1000 (score × 100) to avoid float imprecision.
+// Divide by 100 when reading to restore the 0–10 scale.
+export const judgements = sqliteTable('judgements', {
+  id: text('id').primaryKey(),
+  runId: text('run_id').notNull(),
+  rubricId: text('rubric_id').notNull(),
+  overallScore: integer('overall_score').notNull(),
+  criteriaScores: text('criteria_scores', { mode: 'json' })
+    .$type<DbCriterionScore>()
     .notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 })

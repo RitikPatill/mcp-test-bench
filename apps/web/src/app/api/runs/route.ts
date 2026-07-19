@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { getDbReady, servers, scenarios, runs, runScenario } from '@mcp-test-bench/core'
+import { getDbReady, servers, scenarios, runs, turns as turnsTable, runScenario, judgeRun, BUILTIN_RUBRICS } from '@mcp-test-bench/core'
 import { publish } from '@/lib/run-broker'
 
 const bodySchema = z.object({
@@ -61,6 +61,25 @@ export async function POST(request: Request) {
         anthropicApiKey,
       })) {
         publish(runId, event)
+      }
+
+      // After the run completes, invoke the LLM judge
+      try {
+        const runTurns = await db.select().from(turnsTable).where(eq(turnsTable.runId, runId)).all()
+        await judgeRun({
+          run: { id: runId },
+          scenario: {
+            systemPrompt: scenario.systemPrompt,
+            userPrompt: scenario.userPrompt,
+            expectedCriteria: scenario.expectedCriteria,
+          },
+          turns: runTurns,
+          rubric: BUILTIN_RUBRICS['general'],
+          db,
+          anthropicApiKey,
+        })
+      } catch (_err) {
+        // Judge failure must not affect the already-completed run record
       }
     })()
 

@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import { eq } from 'drizzle-orm'
-import { getDbReady, runs, turns, servers, scenarios } from '@mcp-test-bench/core'
+import { getDbReady, runs, turns, servers, scenarios, judgements } from '@mcp-test-bench/core'
+import type { Judgement } from '@mcp-test-bench/core'
 import { RunTrace } from '@/components/run-trace'
+import { JudgePanel } from '@/components/judge-panel'
 
 export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: runId } = await params
@@ -28,6 +30,24 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
     .where(eq(turns.runId, runId))
     .orderBy(turns.index)
     .all()
+
+  const dbJudgement = await db
+    .select()
+    .from(judgements)
+    .where(eq(judgements.runId, runId))
+    .get()
+
+  const judgement: Judgement | null = dbJudgement
+    ? {
+        id: dbJudgement.id,
+        runId: dbJudgement.runId,
+        rubricId: dbJudgement.rubricId,
+        // overallScore stored as integer ×100 in DB
+        overallScore: dbJudgement.overallScore / 100,
+        criteriaScores: dbJudgement.criteriaScores as Judgement['criteriaScores'],
+        createdAt: dbJudgement.createdAt,
+      }
+    : null
 
   const initialTurns = runTurns.map((t) => ({
     index: t.index,
@@ -86,6 +106,8 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       </div>
 
       <RunTrace runId={runId} initialTurns={initialTurns} initialStatus={run.status} />
+
+      <JudgePanel judgement={judgement} />
     </main>
   )
 }

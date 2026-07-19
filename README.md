@@ -11,7 +11,7 @@ MCP Test Bench is a local, open-source evaluation harness for [Model Context Pro
 1. **Discovers** every tool, resource, and prompt the server exposes.
 2. **Generates** realistic test scenarios from the tool schemas using Claude.
 3. **Executes** those scenarios by driving Claude as an agent through the MCP server, recording every tool call and response.
-4. **Judges** each run against configurable rubrics using LLM-as-judge (correctness, safety, efficiency, hallucination).
+4. **Judges** each run against configurable rubrics using LLM-as-judge (correctness, tool-selection accuracy, efficiency, safety).
 5. **Audits** the server for common security issues: prompt-injection in tool descriptions, unbounded outputs, PII leakage, dangerous side-effect tools without confirmation gates.
 6. **Visualizes** everything in a Next.js dashboard — run history, trace timelines, tool-call diffs, security findings, and per-server rankings.
 
@@ -35,9 +35,10 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | `runScenario` async-generator + SQLite turn recording | **M3** ✅ |
 | `McpSession` persistent MCP connection across turns | **M3** ✅ |
 | `/runs/[id]` trace timeline page (live + replayed) | **M3** ✅ |
-| Auto-generated test scenarios (Claude) | M4 |
-| YAML scripted scenarios | M4 |
-| LLM-as-judge scoring (4 rubrics) | M4 |
+| LLM-as-judge scoring (4 built-in rubrics) | **M4** ✅ |
+| Radar chart + per-criterion reasoning on Run page | **M4** ✅ |
+| Auto-generated test scenarios (Claude) | M5 |
+| YAML scripted scenarios | M5 |
 | Security scanner (static + runtime) | M5 |
 | Web dashboard with trace timeline | M6 |
 | CLI (`mcpbench run`) for CI | M7 |
@@ -60,7 +61,7 @@ flowchart LR
 
 ### Packages
 
-- `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
+- `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `judgeRun()` LLM-as-judge (4 built-in rubrics), `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
 - `apps/web` — Next.js 15 App Router dashboard; `POST /api/servers` registers a server, `POST /api/servers/[id]/scenarios` creates a scenario, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/runs/[id]` shows the live trace timeline
 - `apps/cli` — `mcpbench` CLI binary
 
@@ -105,8 +106,8 @@ pnpm --filter @mcp-test-bench/web dev
 | **M1** ✅ | pnpm + Turborepo monorepo scaffold; Next.js 15 + Tailwind + shadcn/ui hello-world; TypeScript strict; Vitest; ESLint; Prettier; `.env.example` |
 | **M2** ✅ | `discoverServer()` wrapping `@modelcontextprotocol/sdk` for stdio + SSE; normalized `DiscoveredSchema`; SQLite via `@libsql/client` + drizzle-orm; `POST /api/servers` route; integration tests against `server-everything` |
 | **M3** ✅ | `runScenario()` Claude agent loop (`@anthropic-ai/sdk`); `McpSession` persistent MCP connection; `scenarios`/`runs`/`turns` DB tables; SSE streaming via in-process broker; `/runs/[id]` trace timeline with live `EventSource` updates |
-| M4 | Scenario generation with Claude; YAML scripted runner; LLM-as-judge with 4 built-in rubrics |
-| M5 | Security scanner |
+| **M4** ✅ | `judgeRun()` LLM-as-judge with `claude-haiku-4-5-20251001`; 4 built-in rubrics (general, filesystem, data\_retrieval, code\_execution); `judgements` DB table; radar chart + per-criterion reasoning on the Run page |
+| M5 | Scenario generation with Claude; YAML scripted runner; security scanner |
 | M6 | Full dashboard — traces, diffs, rankings |
 | M7 | CLI binary + CI integration |
 
