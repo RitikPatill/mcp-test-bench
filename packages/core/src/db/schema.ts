@@ -62,3 +62,24 @@ export const judgements = sqliteTable('judgements', {
     .notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 })
+
+// Inline to avoid circular import with scanner/types.ts
+type DbFindingCategory =
+  | 'prompt-injection'
+  | 'unbounded-output'
+  | 'destructive-tool'
+  | 'pii-risk'
+  | 'suspicious-output'
+type DbSeverity = 'info' | 'warn' | 'critical'
+
+export const findings = sqliteTable('findings', {
+  id: text('id').primaryKey(),
+  serverId: text('server_id').notNull(),
+  category: text('category').$type<DbFindingCategory>().notNull(),
+  severity: text('severity').$type<DbSeverity>().notNull(),
+  title: text('title').notNull(),
+  detail: text('detail').notNull(),
+  remediation: text('remediation').notNull(),
+  location: text('location').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})
