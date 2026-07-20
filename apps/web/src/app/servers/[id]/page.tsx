@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { eq, and, desc } from 'drizzle-orm'
-import { getDbReady, servers, scenarios } from '@mcp-test-bench/core'
-import type { ScenarioTag } from '@mcp-test-bench/core'
+import { getDbReady, servers, scenarios, findings } from '@mcp-test-bench/core'
+import type { ScenarioTag, Finding } from '@mcp-test-bench/core'
 import { Badge } from '@/components/ui/badge'
 import { ScenarioGenerator } from '@/components/scenario-generator'
+import { SecurityPanel } from '@/components/security-panel'
 import { RunButton } from './run-button'
 
 const TAG_LABELS: Record<ScenarioTag | 'all', string> = {
@@ -25,29 +26,15 @@ export default async function ServerPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tag?: string }>
+  searchParams: Promise<{ tag?: string; tab?: string }>
 }) {
   const { id } = await params
-  const { tag: tagParam } = await searchParams
+  const { tag: tagParam, tab } = await searchParams
 
   const db = await getDbReady(process.env.DATABASE_PATH ?? 'local.db')
 
   const server = await db.select().from(servers).where(eq(servers.id, id)).get()
   if (!server) notFound()
-
-  const validTags = new Set<string>(['happy-path', 'edge', 'adversarial'])
-  const activeTag = tagParam && validTags.has(tagParam) ? (tagParam as ScenarioTag) : null
-
-  const whereClause = activeTag
-    ? and(eq(scenarios.serverId, id), eq(scenarios.tag, activeTag))
-    : eq(scenarios.serverId, id)
-
-  const scenarioRows = await db
-    .select()
-    .from(scenarios)
-    .where(whereClause)
-    .orderBy(desc(scenarios.createdAt))
-    .all()
 
   const schema = server.discoveredSchema
   const toolCount = schema?.tools.length ?? 0
@@ -102,6 +89,81 @@ export default async function ServerPage({
         </section>
       )}
 
+      {/* Tab navigation */}
+      <nav className="flex gap-1 border-b">
+        <Link
+          href={`/servers/${id}`}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab !== 'security'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Scenarios
+        </Link>
+        <Link
+          href={`/servers/${id}?tab=security`}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            tab === 'security'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Security
+        </Link>
+      </nav>
+
+      {tab === 'security' ? (
+        <SecurityTabContent serverId={id} db={db} />
+      ) : (
+        <ScenariosTabContent id={id} tagParam={tagParam} db={db} />
+      )}
+    </main>
+  )
+}
+
+async function SecurityTabContent({
+  serverId,
+  db,
+}: {
+  serverId: string
+  db: Awaited<ReturnType<typeof getDbReady>>
+}) {
+  const rows = await db
+    .select()
+    .from(findings)
+    .where(eq(findings.serverId, serverId))
+    .orderBy(desc(findings.createdAt))
+    .all()
+
+  return <SecurityPanel serverId={serverId} initialFindings={rows as Finding[]} />
+}
+
+async function ScenariosTabContent({
+  id,
+  tagParam,
+  db,
+}: {
+  id: string
+  tagParam?: string
+  db: Awaited<ReturnType<typeof getDbReady>>
+}) {
+  const validTags = new Set<string>(['happy-path', 'edge', 'adversarial'])
+  const activeTag = tagParam && validTags.has(tagParam) ? (tagParam as ScenarioTag) : null
+
+  const whereClause = activeTag
+    ? and(eq(scenarios.serverId, id), eq(scenarios.tag, activeTag))
+    : eq(scenarios.serverId, id)
+
+  const scenarioRows = await db
+    .select()
+    .from(scenarios)
+    .where(whereClause)
+    .orderBy(desc(scenarios.createdAt))
+    .all()
+
+  return (
+    <>
       {/* Scenario generator */}
       <ScenarioGenerator serverId={id} />
 
@@ -153,6 +215,6 @@ export default async function ServerPage({
           ))}
         </ul>
       )}
-    </main>
+    </>
   )
 }
