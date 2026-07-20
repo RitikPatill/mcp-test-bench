@@ -37,9 +37,12 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | `/runs/[id]` trace timeline page (live + replayed) | **M3** ✅ |
 | LLM-as-judge scoring (4 built-in rubrics) | **M4** ✅ |
 | Radar chart + per-criterion reasoning on Run page | **M4** ✅ |
-| Auto-generated test scenarios (Claude) | M5 |
-| YAML scripted scenarios | M5 |
-| Security scanner (static + runtime) | M5 |
+| Auto-generated test scenarios (Claude) | **M5** ✅ |
+| Scenario browser with tag filters (happy-path/edge/adversarial) | **M5** ✅ |
+| Server detail page with schema accordion | **M5** ✅ |
+| Home page server list + Add Server form | **M5** ✅ |
+| YAML scripted scenarios | M6 |
+| Security scanner (static + runtime) | M6 |
 | Web dashboard with trace timeline | M6 |
 | CLI (`mcpbench run`) for CI | M7 |
 
@@ -61,8 +64,8 @@ flowchart LR
 
 ### Packages
 
-- `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `judgeRun()` LLM-as-judge (4 built-in rubrics), `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
-- `apps/web` — Next.js 15 App Router dashboard; `POST /api/servers` registers a server, `POST /api/servers/[id]/scenarios` creates a scenario, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/runs/[id]` shows the live trace timeline
+- `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `judgeRun()` LLM-as-judge (4 built-in rubrics), `generateScenarios()` Claude-powered scenario generator, `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
+- `apps/web` — Next.js 15 App Router dashboard; `GET /api/servers` lists servers, `POST /api/servers` registers + discovers a server, `GET /api/servers/[id]` returns server detail, `POST /api/servers/[id]/generate-scenarios` generates N test scenarios with Claude, `GET /api/servers/[id]/scenarios` lists scenarios (filterable by tag), `POST /api/servers/[id]/scenarios` creates a manual scenario, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/servers/[id]` shows server detail + scenario browser, `/runs/[id]` shows the live trace timeline
 - `apps/cli` — `mcpbench` CLI binary
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
@@ -107,8 +110,8 @@ pnpm --filter @mcp-test-bench/web dev
 | **M2** ✅ | `discoverServer()` wrapping `@modelcontextprotocol/sdk` for stdio + SSE; normalized `DiscoveredSchema`; SQLite via `@libsql/client` + drizzle-orm; `POST /api/servers` route; integration tests against `server-everything` |
 | **M3** ✅ | `runScenario()` Claude agent loop (`@anthropic-ai/sdk`); `McpSession` persistent MCP connection; `scenarios`/`runs`/`turns` DB tables; SSE streaming via in-process broker; `/runs/[id]` trace timeline with live `EventSource` updates |
 | **M4** ✅ | `judgeRun()` LLM-as-judge with `claude-haiku-4-5-20251001`; 4 built-in rubrics (general, filesystem, data\_retrieval, code\_execution); `judgements` DB table; radar chart + per-criterion reasoning on the Run page |
-| M5 | Scenario generation with Claude; YAML scripted runner; security scanner |
-| M6 | Full dashboard — traces, diffs, rankings |
+| **M5** ✅ | `generateScenarios()` in `packages/core`: prompts Claude to produce N scenarios (happy-path, edge-case, adversarial, multi-tool) from the discovered schema, deduplicates, and persists as `Scenario` rows; `POST /api/servers/[id]/generate-scenarios` API route; `/servers/[id]` server detail page with schema accordion and "Generate scenarios" button; scenario browser with tag-based filtering; home page server list with Add Server form |
+| M6 | YAML scripted scenarios; security scanner (static + runtime); polished run rankings and diff views |
 | M7 | CLI binary + CI integration |
 
 ## License

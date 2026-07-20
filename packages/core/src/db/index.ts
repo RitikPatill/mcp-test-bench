@@ -73,6 +73,15 @@ export async function getDbReady(dbPath = 'local.db'): Promise<DrizzleDb> {
     )
   `)
 
+  // Migration guard: add tag column to existing scenarios tables
+  try {
+    await client.execute(
+      `ALTER TABLE scenarios ADD COLUMN tag TEXT NOT NULL DEFAULT 'happy-path'`,
+    )
+  } catch {
+    // column already exists — safe to ignore
+  }
+
   const db = drizzle(client, { schema })
   instances.set(key, db)
   return db

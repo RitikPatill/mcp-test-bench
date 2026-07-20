@@ -1,7 +1,39 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import { getDbReady, servers, scenarios } from '@mcp-test-bench/core'
+import type { ScenarioTag } from '@mcp-test-bench/core'
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id: serverId } = await params
+    const { searchParams } = new URL(request.url)
+    const tag = searchParams.get('tag') as ScenarioTag | null
+
+    const db = await getDbReady(process.env.DATABASE_PATH ?? 'local.db')
+
+    const validTags = new Set(['happy-path', 'edge', 'adversarial'])
+    const whereClause =
+      tag && validTags.has(tag)
+        ? and(eq(scenarios.serverId, serverId), eq(scenarios.tag, tag))
+        : eq(scenarios.serverId, serverId)
+
+    const rows = await db
+      .select()
+      .from(scenarios)
+      .where(whereClause)
+      .orderBy(desc(scenarios.createdAt))
+      .all()
+
+    return NextResponse.json(rows)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
 
 const bodySchema = z.object({
   systemPrompt: z.string().min(1),

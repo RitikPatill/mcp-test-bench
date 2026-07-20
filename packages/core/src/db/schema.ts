@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
 import type { ServerConfig, DiscoveredSchema } from '../mcp-client/types.js'
+import type { ScenarioTag } from '../generator/types.js'
 import type Anthropic from '@anthropic-ai/sdk'
 
 // Inline to avoid circular import with judge/types.ts
@@ -19,6 +20,7 @@ export const scenarios = sqliteTable('scenarios', {
   systemPrompt: text('system_prompt').notNull(),
   userPrompt: text('user_prompt').notNull(),
   expectedCriteria: text('expected_criteria', { mode: 'json' }).$type<string[]>().notNull(),
+  tag: text('tag').$type<ScenarioTag>().notNull().default('happy-path'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 })
 
