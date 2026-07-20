@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
+import { desc } from 'drizzle-orm'
 import { discoverServer, getDbReady, servers } from '@mcp-test-bench/core'
 
 const stdioConfigSchema = z.object({
@@ -18,6 +19,17 @@ const bodySchema = z.object({
   name: z.string().min(1),
   config: z.discriminatedUnion('type', [stdioConfigSchema, sseConfigSchema]),
 })
+
+export async function GET() {
+  try {
+    const db = await getDbReady(process.env.DATABASE_PATH ?? 'local.db')
+    const rows = await db.select().from(servers).orderBy(desc(servers.createdAt)).all()
+    return NextResponse.json(rows)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
 
 export async function POST(request: Request) {
   try {
