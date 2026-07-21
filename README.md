@@ -45,8 +45,14 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | Security tab per server (findings list + scan button) | **M6** ✅ |
 | `findings` DB table with severity/category/remediation | **M6** ✅ |
 | `POST /api/servers/[id]/scan` + `GET` findings route | **M6** ✅ |
-| YAML scripted scenarios | M7 |
-| CLI (`mcpbench run`) for CI | M7 |
+| Home page server table with score, sparkline, pass rate, findings | **M7** ✅ |
+| Server comparison view (`/compare?ids=...`) with rubric bar chart | **M7** ✅ |
+| Runs tab per server with tag + status filtering | **M7** ✅ |
+| Dark mode toggle (next-themes, `prefers-color-scheme`) | **M7** ✅ |
+| `GET /api/servers/[id]/stats` · `GET /api/servers/[id]/runs` · `GET /api/compare` | **M7** ✅ |
+| Vitest tests for all three new API routes | **M7** ✅ |
+| YAML scripted scenarios | M8 |
+| CLI (`mcpbench run`) for CI | M8 |
 
 ## Architecture
 
@@ -67,7 +73,7 @@ flowchart LR
 ### Packages
 
 - `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `judgeRun()` LLM-as-judge (4 built-in rubrics), `generateScenarios()` Claude-powered scenario generator, `scanServer()` security scanner (static checks for prompt-injection patterns, unbounded-output tools, and destructive tools without confirmation; runtime output scanning for PII and injection), `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
-- `apps/web` — Next.js 15 App Router dashboard; `GET /api/servers` lists servers, `POST /api/servers` registers + discovers a server, `GET /api/servers/[id]` returns server detail, `POST /api/servers/[id]/generate-scenarios` generates N test scenarios with Claude, `GET /api/servers/[id]/scenarios` lists scenarios (filterable by tag), `POST /api/servers/[id]/scenarios` creates a manual scenario, `POST /api/servers/[id]/scan` runs the security scanner and persists findings, `GET /api/servers/[id]/scan` returns existing findings, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/servers/[id]` shows server detail + scenario browser + Security tab with findings list and scan button, `/runs/[id]` shows the live trace timeline
+- `apps/web` — Next.js 15 App Router dashboard; `GET /api/servers` lists servers, `POST /api/servers` registers + discovers a server, `GET /api/servers/[id]` returns server detail, `GET /api/servers/[id]/stats` returns latest score, sparkline, pass rate, and finding counts, `POST /api/servers/[id]/generate-scenarios` generates N test scenarios with Claude, `GET /api/servers/[id]/scenarios` lists scenarios (filterable by tag), `POST /api/servers/[id]/scenarios` creates a manual scenario, `GET /api/servers/[id]/runs` lists runs with optional tag/status filter, `POST /api/servers/[id]/scan` runs the security scanner and persists findings, `GET /api/servers/[id]/scan` returns existing findings, `GET /api/compare?ids=...` returns comparison data for 2–3 servers, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/servers/[id]` shows server detail + scenario browser + Security tab + Runs tab with tag/status filters, `/runs/[id]` shows the live trace timeline, `/compare?ids=...` shows a rubric-by-rubric grouped bar chart for selected servers
 - `apps/cli` — `mcpbench` CLI binary
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
@@ -114,7 +120,8 @@ pnpm --filter @mcp-test-bench/web dev
 | **M4** ✅ | `judgeRun()` LLM-as-judge with `claude-haiku-4-5-20251001`; 4 built-in rubrics (general, filesystem, data\_retrieval, code\_execution); `judgements` DB table; radar chart + per-criterion reasoning on the Run page |
 | **M5** ✅ | `generateScenarios()` in `packages/core`: prompts Claude to produce N scenarios (happy-path, edge-case, adversarial, multi-tool) from the discovered schema, deduplicates, and persists as `Scenario` rows; `POST /api/servers/[id]/generate-scenarios` API route; `/servers/[id]` server detail page with schema accordion and "Generate scenarios" button; scenario browser with tag-based filtering; home page server list with Add Server form |
 | **M6** ✅ | `packages/core/scanner`: static checks detect prompt-injection patterns (hidden instructions, base64 blobs, jailbreak phrases per CyberArk "Poison Everywhere" research), unbounded-output tools, and destructive tools lacking confirmation semantics; runtime hooks flag suspicious tool outputs mid-run; `findings` DB table with severity (`info`/`warn`/`critical`), category, and remediation notes; `POST /api/servers/[id]/scan` + `GET` findings route; Security tab per server with findings list, severity badges, and scan button; fixtures based on Damn Vulnerable MCP server test cases |
-| M7 | YAML scripted scenarios; CLI binary (`mcpbench run`) for CI integration |
+| **M7** ✅ | Dashboard comparison + history: home page server table with latest score badge, recharts sparkline, pass-rate %, and severity-coded finding counts; Compare checkbox on each row with sticky `CompareBar`; `/compare?ids=...` page with rubric-by-rubric grouped bar chart and summary table; Runs tab on the server detail page with tag + status dropdown filters; `GET /api/servers/[id]/stats`, `GET /api/servers/[id]/runs`, `GET /api/compare` API routes; dark-mode toggle via `next-themes`; Skeleton/Select shadcn components; Vitest unit tests for all three new API routes |
+| M8 | YAML scripted scenarios; CLI binary (`mcpbench run`) for CI integration |
 
 ## License
 

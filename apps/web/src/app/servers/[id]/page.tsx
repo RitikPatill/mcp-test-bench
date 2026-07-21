@@ -6,6 +6,7 @@ import type { ScenarioTag, Finding } from '@mcp-test-bench/core'
 import { Badge } from '@/components/ui/badge'
 import { ScenarioGenerator } from '@/components/scenario-generator'
 import { SecurityPanel } from '@/components/security-panel'
+import { ServerRunsList } from '@/components/server-runs-list'
 import { RunButton } from './run-button'
 
 const TAG_LABELS: Record<ScenarioTag | 'all', string> = {
@@ -41,18 +42,32 @@ export default async function ServerPage({
   const resourceCount = schema?.resources.length ?? 0
   const promptCount = schema?.prompts.length ?? 0
 
+  const activeTab = tab === 'security' ? 'security' : tab === 'runs' ? 'runs' : 'scenarios'
+
+  const tabClass = (name: string) =>
+    `px-4 py-2 text-sm font-medium transition-colors ${
+      activeTab === name
+        ? 'border-b-2 border-foreground text-foreground'
+        : 'text-muted-foreground hover:text-foreground'
+    }`
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
+      {/* Back link */}
+      <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+        ← All servers
+      </Link>
+
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">{server.name}</h1>
           <Badge variant="secondary">{server.config.type}</Badge>
         </div>
-        <p className="font-mono text-xs text-gray-500">
+        <p className="font-mono text-xs text-muted-foreground">
           {'command' in server.config ? server.config.command : server.config.url}
         </p>
-        <div className="flex gap-4 text-sm text-gray-500 pt-1">
+        <div className="flex gap-4 text-sm text-muted-foreground pt-1">
           <span>{toolCount} tools</span>
           <span>{resourceCount} resources</span>
           <span>{promptCount} prompts</span>
@@ -61,7 +76,7 @@ export default async function ServerPage({
 
       {/* Schema accordion */}
       {schema && schema.tools.length > 0 && (
-        <section className="rounded border bg-white shadow-sm">
+        <section className="rounded border bg-card shadow-sm">
           <details>
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold select-none">
               Tools ({toolCount})
@@ -75,9 +90,9 @@ export default async function ServerPage({
                     </summary>
                     <div className="mt-2 space-y-2">
                       {tool.description && (
-                        <p className="text-sm text-gray-600">{tool.description}</p>
+                        <p className="text-sm text-muted-foreground">{tool.description}</p>
                       )}
-                      <pre className="overflow-x-auto rounded bg-gray-50 p-2 text-xs">
+                      <pre className="overflow-x-auto rounded bg-muted p-2 text-xs">
                         {JSON.stringify(tool.inputSchema, null, 2)}
                       </pre>
                     </div>
@@ -91,30 +106,21 @@ export default async function ServerPage({
 
       {/* Tab navigation */}
       <nav className="flex gap-1 border-b">
-        <Link
-          href={`/servers/${id}`}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            tab !== 'security'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
+        <Link href={`/servers/${id}`} className={tabClass('scenarios')}>
           Scenarios
         </Link>
-        <Link
-          href={`/servers/${id}?tab=security`}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            tab === 'security'
-              ? 'border-b-2 border-black text-black'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
+        <Link href={`/servers/${id}?tab=security`} className={tabClass('security')}>
           Security
+        </Link>
+        <Link href={`/servers/${id}?tab=runs`} className={tabClass('runs')}>
+          Runs
         </Link>
       </nav>
 
-      {tab === 'security' ? (
+      {activeTab === 'security' ? (
         <SecurityTabContent serverId={id} db={db} />
+      ) : activeTab === 'runs' ? (
+        <ServerRunsList serverId={id} />
       ) : (
         <ScenariosTabContent id={id} tagParam={tagParam} db={db} />
       )}
@@ -182,28 +188,28 @@ async function ScenariosTabContent({
 
       {/* Scenario cards */}
       {scenarioRows.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           No scenarios yet. Click &ldquo;Generate scenarios&rdquo; to create some.
         </p>
       ) : (
         <ul className="space-y-3">
           {scenarioRows.map((s) => (
-            <li key={s.id} className="rounded border bg-white p-4 shadow-sm space-y-2">
+            <li key={s.id} className="rounded border bg-card p-4 shadow-sm space-y-2">
               <div className="flex items-center gap-2">
                 <span
-                  className={`rounded px-2 py-0.5 text-xs font-semibold ${TAG_COLORS[s.tag as ScenarioTag] ?? 'bg-gray-100 text-gray-700'}`}
+                  className={`rounded px-2 py-0.5 text-xs font-semibold ${TAG_COLORS[s.tag as ScenarioTag] ?? 'bg-muted text-muted-foreground'}`}
                 >
                   {s.tag}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 italic truncate">{s.systemPrompt}</p>
+              <p className="text-xs text-muted-foreground italic truncate">{s.systemPrompt}</p>
               <p className="text-sm font-medium">{s.userPrompt}</p>
               {s.expectedCriteria && (s.expectedCriteria as string[]).length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {(s.expectedCriteria as string[]).map((c, i) => (
                     <span
                       key={i}
-                      className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                      className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                     >
                       {c}
                     </span>
