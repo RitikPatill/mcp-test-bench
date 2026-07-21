@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { eq } from 'drizzle-orm'
 import { getDbReady, servers, scenarios } from '@mcp-test-bench/core'
 import { Badge } from '@/components/ui/badge'
 import { ServerAddForm } from '@/components/server-add-form'
+import { ServerTable } from '@/components/server-table'
 
 export default async function Home() {
   const db = await getDbReady(process.env.DATABASE_PATH ?? 'local.db')
@@ -15,8 +15,42 @@ export default async function Home() {
     scenarioCounts[s.id] = rows.length
   }
 
+  // Fetch stats for each server
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+  const statsMap: Record<string, {
+    latestScore: number | null
+    sparkline: { score: number; date: string }[]
+    totalRuns: number
+    passRate: number
+    findingCounts: { critical: number; warn: number; info: number }
+  } | null> = {}
+
+  await Promise.all(
+    serverRows.map(async (s) => {
+      try {
+        const res = await fetch(`${baseUrl}/api/servers/${s.id}/stats`, { cache: 'no-store' })
+        statsMap[s.id] = res.ok ? await res.json() : null
+      } catch {
+        statsMap[s.id] = null
+      }
+    }),
+  )
+
+  const tableServers = serverRows.map((s) => ({
+    id: s.id,
+    name: s.name,
+    type: s.config.type,
+    toolCount: s.discoveredSchema?.tools.length ?? '—',
+    scenarioCount: scenarioCounts[s.id] ?? 0,
+    createdAt:
+      s.createdAt instanceof Date
+        ? s.createdAt.toLocaleDateString()
+        : new Date(s.createdAt).toLocaleDateString(),
+    stats: statsMap[s.id] ?? null,
+  }))
+
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-8">
+    <main className="mx-auto max-w-5xl space-y-8 p-8">
       {/* Hero */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -33,45 +67,16 @@ export default async function Home() {
       <ServerAddForm />
 
       {/* Server list */}
-      {serverRows.length > 0 && (
+      {serverRows.length > 0 ? (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Servers</h2>
-          <div className="rounded border bg-white shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Tools</th>
-                  <th className="px-4 py-3">Scenarios</th>
-                  <th className="px-4 py-3">Added</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {serverRows.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">
-                      <Link href={`/servers/${s.id}`} className="hover:underline text-blue-700">
-                        {s.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline">{s.config.type}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {s.discoveredSchema?.tools.length ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{scenarioCounts[s.id] ?? 0}</td>
-                    <td className="px-4 py-3 text-gray-400">
-                      {s.createdAt instanceof Date
-                        ? s.createdAt.toLocaleDateString()
-                        : new Date(s.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ServerTable servers={tableServers} />
+        </section>
+      ) : (
+        <section className="rounded border border-dashed p-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No servers yet. Add your first MCP server above.
+          </p>
         </section>
       )}
     </main>
