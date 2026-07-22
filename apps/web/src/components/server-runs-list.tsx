@@ -103,7 +103,7 @@ export function ServerRunsList({ serverId }: ServerRunsListProps) {
 
       {!loading && !error && runs.length === 0 && (
         <div className="rounded border border-dashed p-8 text-center text-sm text-muted-foreground">
-          <p>No runs yet — pick a scenario and click Run.</p>
+          <p>No runs yet. Select a scenario above and click Run Eval.</p>
         </div>
       )}
 

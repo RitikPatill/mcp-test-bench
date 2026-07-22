@@ -189,7 +189,7 @@ async function ScenariosTabContent({
       {/* Scenario cards */}
       {scenarioRows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No scenarios yet. Click &ldquo;Generate scenarios&rdquo; to create some.
+          No scenarios yet. Click Generate Scenarios to auto-create them from the server schema using Claude.
         </p>
       ) : (
         <ul className="space-y-3">

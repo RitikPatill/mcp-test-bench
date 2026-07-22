@@ -75,7 +75,7 @@ export default async function Home() {
       ) : (
         <section className="rounded border border-dashed p-12 text-center">
           <p className="text-muted-foreground text-sm">
-            No servers yet. Add your first MCP server above.
+            No servers yet. Paste a stdio command above (e.g. npx -y @modelcontextprotocol/server-filesystem /tmp) or an SSE URL to begin.
           </p>
         </section>
       )}
