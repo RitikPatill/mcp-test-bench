@@ -1,0 +1,17 @@
+# NOTE: This file is a documentation template.
+# The demo script (scripts/demo.sh) generates a runtime copy with the
+# absolute path to examples/demo/sample.db substituted in.
+# To use this config directly, replace <ABSOLUTE_PATH_TO_SAMPLE_DB> with
+# the full path, e.g.:
+#   /home/user/mcp-test-bench/examples/demo/sample.db
+
+server:
+  name: SQLite Server
+  type: stdio
+  command: npx
+  args: ["-y", "@modelcontextprotocol/server-sqlite", "<ABSOLUTE_PATH_TO_SAMPLE_DB>"]
+
+rubric: general
+
+scenarios:
+  generate: 3

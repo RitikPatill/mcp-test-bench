@@ -1,0 +1,10 @@
+server:
+  name: Filesystem Server
+  type: stdio
+  command: npx
+  args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+
+rubric: general
+
+scenarios:
+  generate: 3
