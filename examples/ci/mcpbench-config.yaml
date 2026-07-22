@@ -1,0 +1,13 @@
+server:
+  name: everything-server
+  type: stdio
+  command: npx
+  args: ["-y", "@modelcontextprotocol/server-everything"]
+
+rubric: general
+
+scenarios:
+  generate: 5
+
+baseline:
+  score: 6.0

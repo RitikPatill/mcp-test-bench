@@ -1,0 +1,36 @@
+name: MCP Eval
+
+on: [push, pull_request]
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm build
+
+      - name: Run MCP eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: pnpm exec mcpbench run examples/ci/mcpbench-config.yaml --db /tmp/mcpbench.db
+
+      - name: Export JUnit report
+        if: always()
+        run: pnpm exec mcpbench report --format junit --db /tmp/mcpbench.db --output junit-report.xml
+
+      - uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: junit-report.xml

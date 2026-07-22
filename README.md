@@ -51,8 +51,9 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | Dark mode toggle (next-themes, `prefers-color-scheme`) | **M7** ✅ |
 | `GET /api/servers/[id]/stats` · `GET /api/servers/[id]/runs` · `GET /api/compare` | **M7** ✅ |
 | Vitest tests for all three new API routes | **M7** ✅ |
-| YAML scripted scenarios | M8 |
-| CLI (`mcpbench run`) for CI | M8 |
+| `mcpbench run <config.yaml>` CLI with baseline exit code | **M8** ✅ |
+| `mcpbench report --format json\|junit` for CI pipelines | **M8** ✅ |
+| GitHub Actions example workflow with JUnit report upload | **M8** ✅ |
 
 ## Architecture
 
@@ -74,7 +75,7 @@ flowchart LR
 
 - `packages/core` — `discoverServer()` MCP client, `McpSession` long-lived connection, `runScenario()` Claude agent loop, `judgeRun()` LLM-as-judge (4 built-in rubrics), `generateScenarios()` Claude-powered scenario generator, `scanServer()` security scanner (static checks for prompt-injection patterns, unbounded-output tools, and destructive tools without confirmation; runtime output scanning for PII and injection), `getDbReady()` SQLite helper (libsql + drizzle-orm), shared types
 - `apps/web` — Next.js 15 App Router dashboard; `GET /api/servers` lists servers, `POST /api/servers` registers + discovers a server, `GET /api/servers/[id]` returns server detail, `GET /api/servers/[id]/stats` returns latest score, sparkline, pass rate, and finding counts, `POST /api/servers/[id]/generate-scenarios` generates N test scenarios with Claude, `GET /api/servers/[id]/scenarios` lists scenarios (filterable by tag), `POST /api/servers/[id]/scenarios` creates a manual scenario, `GET /api/servers/[id]/runs` lists runs with optional tag/status filter, `POST /api/servers/[id]/scan` runs the security scanner and persists findings, `GET /api/servers/[id]/scan` returns existing findings, `GET /api/compare?ids=...` returns comparison data for 2–3 servers, `POST /api/runs` fires an eval run, `GET /api/runs/[id]` returns the run + turns, `GET /api/runs/[id]/stream` streams `RunEvent`s as SSE, `/servers/[id]` shows server detail + scenario browser + Security tab + Runs tab with tag/status filters, `/runs/[id]` shows the live trace timeline, `/compare?ids=...` shows a rubric-by-rubric grouped bar chart for selected servers
-- `apps/cli` — `mcpbench` CLI binary
+- `apps/cli` — `mcpbench` CLI binary; `run <config.yaml>` connects to an MCP server, discovers tools, auto-generates or loads YAML scenarios, runs them through the agent loop, judges each run, scans for security findings, and exits non-zero when score falls below a configurable baseline; `report --format json|junit` reads the last run from SQLite and emits a machine-readable CI report
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
 
@@ -108,7 +109,51 @@ Run a single package:
 ```bash
 pnpm --filter @mcp-test-bench/core test
 pnpm --filter @mcp-test-bench/web dev
+pnpm --filter @mcp-test-bench/cli test
 ```
+
+## CLI (`mcpbench`)
+
+After `pnpm build`, the `mcpbench` binary is available from `apps/cli/dist/index.js` (or globally after `npm link`).
+
+```bash
+# Run a full evaluation
+ANTHROPIC_API_KEY=sk-... mcpbench run examples/ci/mcpbench-config.yaml --db eval.db
+
+# Fail the build if mean score drops below 6.0
+mcpbench run examples/ci/mcpbench-config.yaml --baseline 6.0
+
+# Skip the security scanner
+mcpbench run examples/ci/mcpbench-config.yaml --no-scan
+
+# Export the last run as JSON
+mcpbench report --db eval.db
+
+# Export as JUnit XML for CI
+mcpbench report --format junit --db eval.db --output junit-report.xml
+```
+
+### Config file format (`mcpbench-config.yaml`)
+
+```yaml
+server:
+  name: my-server          # stable ID across runs (accumulates history)
+  type: stdio              # or sse
+  command: npx
+  args: ["-y", "@modelcontextprotocol/server-everything"]
+
+rubric: general            # general | filesystem | data-retrieval | code-execution
+
+scenarios:
+  generate: 10             # auto-generate with Claude; or use `file: path/to/scenarios.yaml`
+
+baseline:
+  score: 6.0               # exit 1 if mean score falls below this (0-10 scale)
+```
+
+### GitHub Actions integration
+
+See [`examples/ci/mcpbench.yml`](examples/ci/mcpbench.yml) for a complete workflow that runs the eval, exports a JUnit report, and uploads it via `mikepenz/action-junit-report`.
 
 ## Roadmap
 
@@ -121,7 +166,7 @@ pnpm --filter @mcp-test-bench/web dev
 | **M5** ✅ | `generateScenarios()` in `packages/core`: prompts Claude to produce N scenarios (happy-path, edge-case, adversarial, multi-tool) from the discovered schema, deduplicates, and persists as `Scenario` rows; `POST /api/servers/[id]/generate-scenarios` API route; `/servers/[id]` server detail page with schema accordion and "Generate scenarios" button; scenario browser with tag-based filtering; home page server list with Add Server form |
 | **M6** ✅ | `packages/core/scanner`: static checks detect prompt-injection patterns (hidden instructions, base64 blobs, jailbreak phrases per CyberArk "Poison Everywhere" research), unbounded-output tools, and destructive tools lacking confirmation semantics; runtime hooks flag suspicious tool outputs mid-run; `findings` DB table with severity (`info`/`warn`/`critical`), category, and remediation notes; `POST /api/servers/[id]/scan` + `GET` findings route; Security tab per server with findings list, severity badges, and scan button; fixtures based on Damn Vulnerable MCP server test cases |
 | **M7** ✅ | Dashboard comparison + history: home page server table with latest score badge, recharts sparkline, pass-rate %, and severity-coded finding counts; Compare checkbox on each row with sticky `CompareBar`; `/compare?ids=...` page with rubric-by-rubric grouped bar chart and summary table; Runs tab on the server detail page with tag + status dropdown filters; `GET /api/servers/[id]/stats`, `GET /api/servers/[id]/runs`, `GET /api/compare` API routes; dark-mode toggle via `next-themes`; Skeleton/Select shadcn components; Vitest unit tests for all three new API routes |
-| M8 | YAML scripted scenarios; CLI binary (`mcpbench run`) for CI integration |
+| **M8** ✅ | `apps/cli`: `mcpbench run <config.yaml>` drives full eval loop (discover → generate/load scenarios → run → judge → scan) and exits 1 on score regression or critical findings; `mcpbench report --format json|junit` exports last run for CI; Zod-validated YAML config with `server`, `rubric`, `scenarios`, and `baseline`; `tsup` build with shebang; GitHub Actions example workflow in `examples/ci/`; unit tests for config schema + JUnit XML formatter |
 
 ## License
 

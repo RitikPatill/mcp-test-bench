@@ -1,16 +1,27 @@
 {
   "name": "@mcp-test-bench/cli",
   "version": "0.0.1",
+  "type": "module",
   "bin": {
     "mcpbench": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "dev": "tsc --project tsconfig.json --watch",
-    "lint": "eslint src"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mcp-test-bench/core": "workspace:*",
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.0",
-    "typescript": "*"
+    "tsup": "^8.3.0",
+    "typescript": "*",
+    "vitest": "^2.1.0"
   }
 }
