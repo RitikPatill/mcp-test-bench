@@ -2,6 +2,8 @@
 
 > `jest` + `lighthouse` for MCP servers — discover tools, generate test scenarios, score with LLM-as-judge, and audit for security.
 
+![demo](docs/demo.gif)
+
 ![Screenshot placeholder](docs/screenshot-placeholder.png)
 
 ## What it does
@@ -54,6 +56,11 @@ The MCP ecosystem is exploding but there's no shared way to answer: *does this M
 | `mcpbench run <config.yaml>` CLI with baseline exit code | **M8** ✅ |
 | `mcpbench report --format json\|junit` for CI pipelines | **M8** ✅ |
 | GitHub Actions example workflow with JUnit report upload | **M8** ✅ |
+| `pnpm demo` one-command seed: runs filesystem, everything, and sqlite servers through 3 scenarios each with security scanning | **M9** ✅ |
+| `scripts/create-demo-db.mjs` seed script with realistic sample SQLite tables | **M9** ✅ |
+| `examples/demo/` YAML configs for the three demo servers | **M9** ✅ |
+| `docs/record_demo.sh` helper for asciinema + agg GIF recording | **M9** ✅ |
+| `docs/demo.gif` recorded end-to-end demo | **M9** ✅ |
 
 ## Architecture
 
@@ -78,6 +85,33 @@ flowchart LR
 - `apps/cli` — `mcpbench` CLI binary; `run <config.yaml>` connects to an MCP server, discovers tools, auto-generates or loads YAML scenarios, runs them through the agent loop, judges each run, scans for security findings, and exits non-zero when score falls below a configurable baseline; `report --format json|junit` reads the last run from SQLite and emits a machine-readable CI report
 
 Build tasks are orchestrated with [Turborepo](https://turbo.build) (`turbo.json` at the repo root).
+
+## One-command demo
+
+```bash
+git clone https://github.com/your-org/mcp-test-bench
+cd mcp-test-bench
+pnpm install
+export ANTHROPIC_API_KEY=sk-ant-...
+pnpm demo
+```
+
+`pnpm demo` builds the CLI, creates a sample SQLite database, evaluates three public MCP servers (filesystem, everything, sqlite — 3 scenarios each), and prints the command to start the dashboard pointing at the populated `demo.db`. Total runtime is roughly 3–5 minutes on first run (package downloads + API calls).
+
+After it completes:
+
+```bash
+DATABASE_PATH=demo.db pnpm --filter @mcp-test-bench/web dev
+# open http://localhost:3000
+```
+
+You will see three scored servers with sparklines, security findings, and the comparison view at `/compare`.
+
+To regenerate the demo GIF (requires `asciinema` + `agg`):
+
+```bash
+bash docs/record_demo.sh
+```
 
 ## Quickstart
 
@@ -167,6 +201,7 @@ See [`examples/ci/mcpbench.yml`](examples/ci/mcpbench.yml) for a complete workfl
 | **M6** ✅ | `packages/core/scanner`: static checks detect prompt-injection patterns (hidden instructions, base64 blobs, jailbreak phrases per CyberArk "Poison Everywhere" research), unbounded-output tools, and destructive tools lacking confirmation semantics; runtime hooks flag suspicious tool outputs mid-run; `findings` DB table with severity (`info`/`warn`/`critical`), category, and remediation notes; `POST /api/servers/[id]/scan` + `GET` findings route; Security tab per server with findings list, severity badges, and scan button; fixtures based on Damn Vulnerable MCP server test cases |
 | **M7** ✅ | Dashboard comparison + history: home page server table with latest score badge, recharts sparkline, pass-rate %, and severity-coded finding counts; Compare checkbox on each row with sticky `CompareBar`; `/compare?ids=...` page with rubric-by-rubric grouped bar chart and summary table; Runs tab on the server detail page with tag + status dropdown filters; `GET /api/servers/[id]/stats`, `GET /api/servers/[id]/runs`, `GET /api/compare` API routes; dark-mode toggle via `next-themes`; Skeleton/Select shadcn components; Vitest unit tests for all three new API routes |
 | **M8** ✅ | `apps/cli`: `mcpbench run <config.yaml>` drives full eval loop (discover → generate/load scenarios → run → judge → scan) and exits 1 on score regression or critical findings; `mcpbench report --format json|junit` exports last run for CI; Zod-validated YAML config with `server`, `rubric`, `scenarios`, and `baseline`; `tsup` build with shebang; GitHub Actions example workflow in `examples/ci/`; unit tests for config schema + JUnit XML formatter |
+| **M9** ✅ | End-to-end demo: `pnpm demo` seeds `demo.db` with three public MCP servers (filesystem, everything, sqlite), runs 3 scenarios each with security scanning, and prints the dashboard start command; `scripts/create-demo-db.mjs` creates realistic sample tables; `examples/demo/` YAML configs; `docs/record_demo.sh` helper for asciinema + agg GIF capture; placeholder `docs/demo.gif` |
 
 ## License
 
