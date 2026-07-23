@@ -1,5 +1,9 @@
 # MCP Test Bench
 
+
+> **Video walkthrough:** https://youtu.be/rGaS_9dsOao
+> **60-second overview:** https://youtu.be/eqE1Nj6BDIk
+
 > Open-source evaluation harness for MCP servers: auto-discovers tools, runs LLM-judged scenarios, flags security issues, and shows traces in a web dashboard.
 
 <!-- TODO: replace with a 5-10 second demo gif. Record with ScreenToGif on
